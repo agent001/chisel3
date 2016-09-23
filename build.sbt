@@ -87,12 +87,14 @@ lazy val chiselSettings = Seq (
   // Tests from other projects may still run concurrently.
   parallelExecution in Test := true,
 
-  javacOptions ++= Seq("-target", "1.7")
+  javacOptions ++= Seq("-target", "1.7"),
   //  Hopefully we get these options back in Chisel3
   //  scalacOptions in (Compile, doc) <++= (baseDirectory in LocalProject("chisel"), version) map { (bd, v) =>
   //    Seq("-diagrams", "-diagrams-max-classes", "25", "-sourcepath", bd.getAbsolutePath, "-doc-source-url",
   //        "https://github.com/ucb-bar/chisel/tree/master/€{FILE_PATH}.scala")
   //  }
+
+  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 )
 
 lazy val coreMacros = (project in file("coreMacros")).
@@ -100,6 +102,7 @@ lazy val coreMacros = (project in file("coreMacros")).
   settings(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     publishArtifact := false
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
   )
 
 lazy val chiselFrontend = (project in file("chiselFrontend")).
@@ -107,6 +110,7 @@ lazy val chiselFrontend = (project in file("chiselFrontend")).
   settings(
     libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
     publishArtifact := false
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
   ).
   dependsOn(coreMacros)
 
