@@ -15,7 +15,6 @@ private[chisel3] object SeqUtils {
     */
   def asUInt[T <: Bits](in: Seq[T]): UInt = macro SourceInfoTransform.inArg
 
-  @chisel3.internal.naming.dump
   def do_asUInt[T <: Bits](in: Seq[T])(implicit sourceInfo: SourceInfo): UInt = {
     if (in.tail.isEmpty) {
       in.head.asUInt
