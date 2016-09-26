@@ -19,16 +19,20 @@ import scala.annotation.compileTimeOnly
 
 object NamingTransforms {
   /** Passthrough transform that prints the annottee for debugging purposes.
+    * No guarantees are made on what this annotation does, and it may very well change over time.
+    *
+    * The print is warning level to make it visually easier to spot, as well as a reminder that
+    * this annotation should not make it to production / committed code.
     */
   def dump(c: Context)(annottees: c.Tree*): c.Tree = {
     import c.universe._
     import Flag._
 
-    annottees.foreach(tree => println(show(tree)))
+    annottees.foreach(tree => c.warning(c.enclosingPosition, s"Debug dump:\n${show(tree)}"))
     q"..$annottees"
   }
 
-  /** Applies naming transforms to vals in the annotated module
+  /** Applies naming transforms to vals in the annotated module. Does not apply recursively to subclasses.
     */
   def module(c: Context)(annottees: c.Tree*): c.Tree = {
     import c.universe._
@@ -39,10 +43,17 @@ object NamingTransforms {
       override def transform(tree: Tree) = tree match {
         case q"$mods val $tname: $tpt = $expr" => {
           val TermName(tnameStr: String) = tname
-          println(s"val: $tnameStr <= " + show(expr));
+          println(s"val: $tnameStr: $tpt = ${showCode(expr)}");
           val transformedExpr = super.transform(expr)
           q"$mods val $tname: $tpt = _root_.chisel3.internal.naming.Namer($transformedExpr, $tnameStr)"
         }
+        // Don't recursively descend into inner classes, it will attempt to add naming to earlydefns and fail.
+        case q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
+          q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
+        case q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
+          q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
+        case q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
+          q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }"
         case _ =>  println("stmt: " + show(tree)); super.transform(tree)
       }
     }
@@ -59,7 +70,7 @@ object NamingTransforms {
         q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$transformedStats }"
       }
       case q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" => {
-        // Don't fail noisly when a companion object is passed in with the actuall class def
+        // Don't fail noisly when a companion object is passed in with the actual class def
         q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }"
       }
       case other => c.abort(c.enclosingPosition, s"@module annotion may only be used on classes and traits, got ${showCode(other)}")

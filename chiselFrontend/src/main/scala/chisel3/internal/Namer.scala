@@ -10,7 +10,7 @@ object Namer {
     * Is a no-op (but safe) when applied on objects that aren't named, including non-Chisel data
     * types.
     */
-  def apply[T](obj: T, name: String) {
+  def apply[T](obj: T, name: String): T = {
     obj match {
       case other => other
     }
