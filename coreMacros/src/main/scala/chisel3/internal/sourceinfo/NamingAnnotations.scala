@@ -37,7 +37,13 @@ object NamingTransforms {
 
     val valNameTransform = new Transformer {
       override def transform(tree: Tree) = tree match {
-        case _ => super.transform(tree)
+        case q"$mods val $tname: $tpt = $expr" => {
+          val TermName(tnameStr: String) = tname
+          println(s"val: $tnameStr <= " + show(expr));
+          val transformedExpr = super.transform(expr)
+          q"$mods val $tname: $tpt = _root_.chisel3.internal.naming.Namer($transformedExpr, $tnameStr)"
+        }
+        case _ =>  println("stmt: " + show(tree)); super.transform(tree)
       }
     }
 
