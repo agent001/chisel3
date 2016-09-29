@@ -26,13 +26,32 @@ object NamingTransforms {
     */
   def dump(c: Context)(annottees: c.Tree*): c.Tree = {
     import c.universe._
-    import Flag._
 
     annottees.foreach(tree => c.warning(c.enclosingPosition, s"Debug dump:\n${show(tree)}"))
     q"..$annottees"
   }
 
+  /** Passthrough transform that prints the annottee as a tree for debugging purposes.
+    * No guarantees are made on what this annotation does, and it may very well change over time.
+    *
+    * The print is warning level to make it visually easier to spot, as well as a reminder that
+    * this annotation should not make it to production / committed code.
+    */
+  def treedump(c: Context)(annottees: c.Tree*): c.Tree = {
+    import c.universe._
+
+    annottees.foreach(tree => c.warning(c.enclosingPosition, s"Debug tree dump:\n${showRaw(tree)}"))
+    q"..$annottees"
+  }
+
   /** Applies naming transforms to vals in the annotated module. Does not apply recursively to subclasses.
+    *
+    * Basically rewrites all instances of
+    * val name = expr
+    * to
+    * val name = Namer(expr, name)
+    * where Namer is a passthrough which (mutably) populates the expr's resulting object's name
+    * field if it has one.
     */
   def module(c: Context)(annottees: c.Tree*): c.Tree = {
     import c.universe._
@@ -41,20 +60,15 @@ object NamingTransforms {
 
     val valNameTransform = new Transformer {
       override def transform(tree: Tree) = tree match {
-        case q"$mods val $tname: $tpt = $expr" => {
+        // Intentionally not prefixed with $mods, since modifiers usually mean the val definition
+        // is in a non-transformable location, like as a parameter list.
+        // TODO: is this exhaustive / correct in all cases?
+        case q"val $tname: $tpt = $expr" => {
           val TermName(tnameStr: String) = tname
-          println(s"val: $tnameStr: $tpt = ${showCode(expr)}");
           val transformedExpr = super.transform(expr)
-          q"$mods val $tname: $tpt = _root_.chisel3.internal.naming.Namer($transformedExpr, $tnameStr)"
+          q"val $tname: $tpt = _root_.chisel3.internal.naming.Namer($transformedExpr, $tnameStr)"
         }
-        // Don't recursively descend into inner classes, it will attempt to add naming to earlydefns and fail.
-        case q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
-          q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
-        case q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }" =>
-          q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
-        case q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }" =>
-          q"$mods object $tname extends { ..$earlydefns } with ..$parents { $self => ..$body }"
-        case _ =>  println("stmt: " + show(tree)); super.transform(tree)
+        case other => super.transform(other)
       }
     }
 
@@ -88,6 +102,11 @@ object NamingTransforms {
 @compileTimeOnly("enable macro paradise to expand macro annotations")
 class dump extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro NamingTransforms.dump
+}
+
+@compileTimeOnly("enable macro paradise to expand macro annotations")
+class treedump extends StaticAnnotation {
+  def macroTransform(annottees: Any*): Any = macro NamingTransforms.treedump
 }
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")

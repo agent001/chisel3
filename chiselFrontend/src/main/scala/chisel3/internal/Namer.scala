@@ -12,6 +12,10 @@ object Namer {
     */
   def apply[T](obj: T, name: String): T = {
     obj match {
+      case nameable: chisel3.internal.HasId => {
+        nameable.suggestName(name)
+        nameable.asInstanceOf[T]
+      }
       case other => other
     }
   }
