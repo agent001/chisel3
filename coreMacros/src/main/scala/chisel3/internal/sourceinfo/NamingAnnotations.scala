@@ -65,8 +65,13 @@ object NamingTransforms {
         // TODO: is this exhaustive / correct in all cases?
         case q"val $tname: $tpt = $expr" => {
           val TermName(tnameStr: String) = tname
-          val transformedExpr = super.transform(expr)
-          q"val $tname: $tpt = _root_.chisel3.internal.naming.Namer($transformedExpr, $tnameStr)"
+          val implicitVar = TermName(c.freshName("valName"))
+          // Do not recursively transform expressions in vals, this prevents an implicit conflict
+          q"""val $tname: $tpt = {
+            implicit val $implicitVar = _root_.chisel3.internal.naming.ValName($tnameStr)
+            _root_.chisel3.internal.naming.Namer($expr, implicitly[_root_.chisel3.internal.naming.ImplicitName])
+          }
+            """
         }
         case other => super.transform(other)
       }
