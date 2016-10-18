@@ -7,8 +7,6 @@ import org.scalatest._
 import org.scalatest.prop._
 import chisel3.testers.BasicTester
 
-import chisel3.internal.naming._
-
 object FunctionMockup2 {
   @chiselName
   def apply(): UInt = {
@@ -39,6 +37,10 @@ class NamedModule extends BasicTester {
   stop()
 }
 
+/** A simple test that checks the recursive function val naming annotation.
+  * Doesn't actually check the FIRRTL result, only that the macro is able to compile and run.
+  * Verification (that naming actually happens) is done separately and manually.
+  */
 class NamingAnnotationSpec extends ChiselPropSpec {
   property("NamedModule should elaborate") {
     assertTesterPasses { new NamedModule }

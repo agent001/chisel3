@@ -47,8 +47,9 @@ import java.util.IdentityHashMap
 /** Base class for naming contexts, providing the basic API consisting of naming calls and
   * ability to take descendant naming contexts.
   */
-trait NamingContext {
+class NamingContext {
   val descendants = new IdentityHashMap[AnyRef, NamingContext]()
+  val items = ListBuffer[(AnyRef, String)]()  // tuple of nameable and suffix, meaningless for non isTop
 
   /** Adds a NamingContext object as a descendant - where its contained objects will have names
     * associated with the name given to the reference object, if the reference object is named
@@ -68,52 +69,25 @@ trait NamingContext {
     * types.
     */
   def name[T](obj: T, name: String): T = {
-    // Name the object first, since outermost scope takes priority
-    do_name(obj, name)
-
     obj match {
-      case ref: AnyRef => {
-        if (descendants.containsKey(ref)) {
-          val desc_context = descendants.get(ref)
-          descendants.remove(ref)
-          desc_context match {
-            case desc_context: FunctionNamingContext => for ((nameable, suffix) <- desc_context.items) {
-              do_name(nameable, name + "_" + suffix)
-            }
-          }
-        }
-      }
+      case ref: AnyRef => items += ((ref, name))
       case _ =>
     }
     obj
   }
 
-  def do_name[T](obj: T, name: String)
-}
+  def name_prefix(prefix: String) {
+    for ((ref, suffix) <- items) {
+      // First name the top-level object
+      ref match {
+        case nameable: chisel3.internal.HasId => nameable.suggestName(prefix + suffix)
+        case _ =>
+      }
 
-/** A function-level intermediate naming context, which stores suffix names of objects declared in
-  * the function, then relies on a higher-level naming context to add prefixes and complete the full
-  * name.
-  */
-class FunctionNamingContext() extends NamingContext {
-  val items = ListBuffer[(chisel3.internal.HasId, String)]()  // tuple of nameable and suffix, meaningless for non isTop
-
-  def do_name[T](obj: T, name: String) {
-    obj match {
-      case nameable: chisel3.internal.HasId => items += ((nameable, name))
-      case _ =>
-    }
-  }
-}
-
-/** A top-level naming context, which names objects directly (as no more prefixing is necessary).
-  *
-  */
-class ModuleNamingContext() extends NamingContext {
-  def do_name[T](obj: T, name: String) {
-    obj match {
-      case nameable: chisel3.internal.HasId => nameable.suggestName(name)
-      case _ =>
+      // Then recurse into descendant contexts
+      if (descendants.containsKey(ref)) {
+        descendants.get(ref).name_prefix(prefix + suffix + "_")
+      }
     }
   }
 }
@@ -127,7 +101,8 @@ class NamingStack {
   /** Creates a new naming context, where all items in the context will have their names prefixed
     * with some yet-to-be-determined prefix from object names in an enclosing scope.
     */
-  def push_context(context: NamingContext): NamingContext = {
+  def push_context(): NamingContext = {
+    val context = new NamingContext
     naming_stack.push(context)
     context
   }

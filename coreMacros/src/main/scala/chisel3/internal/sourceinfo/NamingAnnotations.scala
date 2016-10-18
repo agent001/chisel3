@@ -88,8 +88,9 @@ object NamingTransforms {
 
       val transformedBody = valNameTransform.transformTrees(stats)
       q"""
-      val $contextVar = $globalNamingStack.push_context(new _root_.chisel3.internal.naming.ModuleNamingContext)
+      val $contextVar = $globalNamingStack.push_context()
       ..$transformedBody
+      $contextVar.name_prefix("")
       $globalNamingStack.pop_context($contextVar)
       """
     }
@@ -123,7 +124,7 @@ object NamingTransforms {
       val transformedBody = valNameTransform.transform(expr)
       q"""
       {
-        val $contextVar = $globalNamingStack.push_context(new _root_.chisel3.internal.naming.FunctionNamingContext)
+        val $contextVar = $globalNamingStack.push_context()
         $globalNamingStack.pop_return_context($transformedBody, $contextVar)
       }
       """
@@ -148,26 +149,11 @@ object NamingTransforms {
       case other => c.abort(c.enclosingPosition, s"@module annotion may only be used on classes and methods, got ${showCode(other)}")
     })
 
-    if (namedElts != 0) {
+    if (namedElts != 1) {
       // Double check that something was actually transformed
-      c.abort(c.enclosingPosition, s"@chiselName annotation did not match exactly one valid tree, got ${annottees.foreach(tree => showCode(tree).mkString(" "))}")
+      c.abort(c.enclosingPosition, s"@chiselName annotation did not match exactly one valid tree, got:\r\n${annottees.map(tree => showCode(tree)).mkString("\r\n\r\n")}")
     }
 
     q"..$transformed"
   }
-}
-
-@compileTimeOnly("enable macro paradise to expand macro annotations")
-class dump extends StaticAnnotation {
-  def macroTransform(annottees: Any*): Any = macro NamingTransforms.dump
-}
-
-@compileTimeOnly("enable macro paradise to expand macro annotations")
-class treedump extends StaticAnnotation {
-  def macroTransform(annottees: Any*): Any = macro NamingTransforms.treedump
-}
-
-@compileTimeOnly("enable macro paradise to expand macro annotations")
-class chiselName extends StaticAnnotation {
-  def macroTransform(annottees: Any*): Any = macro NamingTransforms.chiselName
 }
