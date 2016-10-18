@@ -10,7 +10,7 @@ import chisel3.testers.BasicTester
 import chisel3.internal.naming._
 
 object FunctionMockup2 {
-  @function
+  @chiselName
   def apply(): UInt = {
     val my2A = UInt(1)
     val my2B = my2A +& UInt(2)
@@ -20,7 +20,7 @@ object FunctionMockup2 {
 }
 
 object FunctionMockup {
-  @function
+  @chiselName
   def apply(): UInt = {
     val myNested = FunctionMockup2()
     val myA = UInt(1) + myNested
@@ -31,7 +31,7 @@ object FunctionMockup {
   }
 }
 
-@module
+@chiselName
 class NamedModule extends BasicTester {
   val test = FunctionMockup()
   val test2 = test +& UInt(2)

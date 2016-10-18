@@ -150,6 +150,3 @@ class NamingStack {
     naming_stack.pop()
   }
 }
-
-// Temporary global stack for testing.
-object NamingStack extends NamingStack
