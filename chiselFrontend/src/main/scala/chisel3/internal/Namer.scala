@@ -50,6 +50,7 @@ import java.util.IdentityHashMap
 class NamingContext {
   val descendants = new IdentityHashMap[AnyRef, NamingContext]()
   val items = ListBuffer[(AnyRef, String)]()  // tuple of nameable and suffix, meaningless for non isTop
+  var closed = false  // a sanity check to ensure no more name() calls are done after name_prefix
 
   /** Adds a NamingContext object as a descendant - where its contained objects will have names
     * associated with the name given to the reference object, if the reference object is named
@@ -69,6 +70,7 @@ class NamingContext {
     * types.
     */
   def name[T](obj: T, name: String): T = {
+    assert(!closed, "Can't name elements after name_prefix called")
     obj match {
       case ref: AnyRef => items += ((ref, name))
       case _ =>
@@ -76,7 +78,12 @@ class NamingContext {
     obj
   }
 
+  /** Gives this context a naming prefix (which may be empty, "", for a top-level Module context)
+    * so that actual naming calls (HasId.suggestName) can happen.
+    * Recursively names descendants, for those whose return value have an associated name.
+    */
   def name_prefix(prefix: String) {
+    closed = true
     for ((ref, suffix) <- items) {
       // First name the top-level object
       ref match {
@@ -120,6 +127,8 @@ class NamingStack {
     prefix_ref
   }
 
+  /** Same as pop_return_context, but for cases where there is no return value (like Module scope).
+   */
   def pop_context(until: NamingContext) {
     assert(naming_stack.top == until)
     naming_stack.pop()
