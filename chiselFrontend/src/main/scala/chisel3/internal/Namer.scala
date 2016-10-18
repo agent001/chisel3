@@ -145,7 +145,7 @@ class NamingStack {
     prefix_ref
   }
 
-  def pop_context(until: NamingContext) = {
+  def pop_context(until: NamingContext) {
     assert(naming_stack.top == until)
     naming_stack.pop()
   }

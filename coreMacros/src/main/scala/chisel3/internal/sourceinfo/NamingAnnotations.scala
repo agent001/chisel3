@@ -74,18 +74,18 @@ object NamingTransforms {
             q"val $tname: $tpt = $contextVar.name($transformedExpr, $tnameStr)"
           }
           // Do not recurse into functions and subclasses
-          case q"(..$params) => $expr" => q"(..$params) => $expr"
-          case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>	q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr"
-          case q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" => q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
-          case q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }" => q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
+          case q"(..$params) => $expr" => tree
+          case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>	tree
+          case q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" => tree
+          case q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }" => tree
           case other => super.transform(other)
         }
       }
 
-      val transformedStats = valNameTransform.transformTrees(stats)
+      val transformedBody = valNameTransform.transformTrees(stats)
       q"""
       $prefix
-      ..$transformedStats
+      ..$transformedBody
       $suffix
       """
     }
@@ -115,6 +115,55 @@ object NamingTransforms {
 
     q"..$transformed"
   }
+
+  /** Applies the same naming transform as in modules to functions, with some additional plumbing
+    * to propagate names.
+    */
+  def function(c: Context)(annottees: c.Tree*): c.Tree = {
+    import c.universe._
+
+    def transformBody(body: c.Tree) = {
+      val contextVar = TermName(c.freshName("namingContext"))
+      val prefix = q"val $contextVar = _root_.chisel3.internal.naming.NamingStack.push_context(new _root_.chisel3.internal.naming.FunctionNamingContext)"
+
+      val valNameTransform = new Transformer {
+        override def transform(tree: Tree) = tree match {
+          // Intentionally not prefixed with $mods, since modifiers usually mean the val definition
+          // is in a non-transformable location, like as a parameter list.
+          // TODO: is this exhaustive / correct in all cases?
+          case q"val $tname: $tpt = $expr" => {
+            val TermName(tnameStr: String) = tname
+            val transformedExpr = super.transform(expr)
+            q"val $tname: $tpt = $contextVar.name($transformedExpr, $tnameStr)"
+          }
+          // Do not recurse into functions and subclasses
+          case q"(..$params) => $expr" => tree
+          case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" => tree
+          case q"return $expr" => c.abort(c.enclosingPosition, "return not supported by @function yet")
+          case other => super.transform(other)
+        }
+      }
+
+      val transformedBody = valNameTransform.transform(body)
+      c.warning(c.enclosingPosition, show(transformedBody))
+      q"""
+      {
+        $prefix
+        _root_.chisel3.internal.naming.NamingStack.pop_return_context($transformedBody, $contextVar)
+      }
+      """
+    }
+
+    val transformed = annottees.map(_ match {
+      case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" => {
+        val transformedExpr = transformBody(expr)
+        q"$mods def $tname[..$tparams](...$paramss): $tpt = $transformedExpr"
+      }
+      case other => c.abort(c.enclosingPosition, s"@module annotion may only be used on classes and traits, got ${showCode(other)}")
+    })
+
+    q"..$transformed"
+  }
 }
 
 @compileTimeOnly("enable macro paradise to expand macro annotations")
@@ -130,4 +179,9 @@ class treedump extends StaticAnnotation {
 @compileTimeOnly("enable macro paradise to expand macro annotations")
 class module extends StaticAnnotation {
   def macroTransform(annottees: Any*): Any = macro NamingTransforms.module
+}
+
+@compileTimeOnly("enable macro paradise to expand macro annotations")
+class function extends StaticAnnotation {
+  def macroTransform(annottees: Any*): Any = macro NamingTransforms.function
 }

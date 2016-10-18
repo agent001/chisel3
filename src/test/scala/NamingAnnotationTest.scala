@@ -10,33 +10,28 @@ import chisel3.testers.BasicTester
 import chisel3.internal.naming._
 
 object FunctionMockup2 {
+  @function
   def apply(): UInt = {
-    val context = NamingStack.push_context(new FunctionNamingContext)
-
-    val my2A = context.name(UInt(1), "my2A")
-    val my2B = context.name(my2A +& UInt(2), "my2B")
-    val my2C = context.name(my2B +& UInt(3), "my2C")
-
-    return NamingStack.pop_return_context(my2C, context)
+    val my2A = UInt(1)
+    val my2B = my2A +& UInt(2)
+    val my2C = my2B +& UInt(3)
+    my2C
   }
 }
 
 object FunctionMockup {
-  @dump
+  @function
   def apply(): UInt = {
-    val context = NamingStack.push_context(new FunctionNamingContext)
+    val myNested = FunctionMockup2()
+    val myA = UInt(1) + myNested
+    val myB = myA +& UInt(2)
+    val myC = myB +& UInt(3)
 
-    val myNested = context.name(FunctionMockup2(), "myNested")
-    val myA = context.name(UInt(1) + myNested, "myA")
-    val myB = context.name(myA +& UInt(2), "myB")
-    val myC = context.name(myB +& UInt(3), "myC")
-
-    return NamingStack.pop_return_context(myC +& UInt(4), context)
+    myC +& UInt(4)
   }
 }
 
 @module
-@dump
 class NamedModule extends BasicTester {
   val test = FunctionMockup()
   val test2 = test +& UInt(2)
