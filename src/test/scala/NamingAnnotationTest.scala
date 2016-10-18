@@ -23,7 +23,7 @@ object FunctionMockup2 {
 
 object FunctionMockup {
   @dump
-  def apply(): (UInt, UInt) = {
+  def apply(): UInt = {
     val context = NamingStack.push_context(new FunctionNamingContext)
 
     val myNested = context.name(FunctionMockup2(), "myNested")
@@ -31,21 +31,17 @@ object FunctionMockup {
     val myB = context.name(myA +& UInt(2), "myB")
     val myC = context.name(myB +& UInt(3), "myC")
 
-    return NamingStack.pop_return_context((myC +& UInt(4), UInt(2)), context)
+    return NamingStack.pop_return_context(myC +& UInt(4), context)
   }
 }
 
+@module
 @dump
 class NamedModule extends BasicTester {
-  val context = NamingStack.push_context(new ModuleNamingContext)
-
-  val (test, testx) = context.name(FunctionMockup(), "test")
-  val test2 = context.name(test +& UInt(2), "test2")
-  val testx2 = context.name(testx +& UInt(2), "testx2")
+  val test = FunctionMockup()
+  val test2 = test +& UInt(2)
 
   stop()
-
-  NamingStack.pop_context(context)
 }
 
 class NamingAnnotationSpec extends ChiselPropSpec {

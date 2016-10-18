@@ -58,33 +58,46 @@ object NamingTransforms {
     import Flag._
     var wasNamed: Boolean = false
 
-    val valNameTransform = new Transformer {
-      override def transform(tree: Tree) = tree match {
-        // Intentionally not prefixed with $mods, since modifiers usually mean the val definition
-        // is in a non-transformable location, like as a parameter list.
-        // TODO: is this exhaustive / correct in all cases?
-        case q"val $tname: $tpt = $expr" => {
-          val TermName(tnameStr: String) = tname
-          val implicitVar = TermName(c.freshName("valName"))
-          // Do not recursively transform expressions in vals, this prevents an implicit conflict
-          q"""val $tname: $tpt = {
-            implicit val $implicitVar = _root_.chisel3.internal.naming.ValName($tnameStr)
-            _root_.chisel3.internal.naming.Namer($expr, implicitly[_root_.chisel3.internal.naming.ImplicitName])
+    def transformBody(stats: List[c.Tree]) = {
+      val contextVar = TermName(c.freshName("namingContext"))
+      val prefix = q"val $contextVar = _root_.chisel3.internal.naming.NamingStack.push_context(new _root_.chisel3.internal.naming.ModuleNamingContext)"
+      val suffix = q"_root_.chisel3.internal.naming.NamingStack.pop_context($contextVar)"
+
+      val valNameTransform = new Transformer {
+        override def transform(tree: Tree) = tree match {
+          // Intentionally not prefixed with $mods, since modifiers usually mean the val definition
+          // is in a non-transformable location, like as a parameter list.
+          // TODO: is this exhaustive / correct in all cases?
+          case q"val $tname: $tpt = $expr" => {
+            val TermName(tnameStr: String) = tname
+            val transformedExpr = super.transform(expr)
+            q"val $tname: $tpt = $contextVar.name($transformedExpr, $tnameStr)"
           }
-            """
+          // Do not recurse into functions and subclasses
+          case q"(..$params) => $expr" => q"(..$params) => $expr"
+          case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" =>	q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr"
+          case q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" => q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
+          case q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }" => q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }"
+          case other => super.transform(other)
         }
-        case other => super.transform(other)
       }
+
+      val transformedStats = valNameTransform.transformTrees(stats)
+      q"""
+      $prefix
+      ..$transformedStats
+      $suffix
+      """
     }
 
     val transformed = annottees.map(_ match {
       case q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$stats }" => {
-        val transformedStats = valNameTransform.transformTrees(stats)
+        val transformedStats = transformBody(stats)
         wasNamed = true
         q"$mods class $tpname[..$tparams] $ctorMods(...$paramss) extends { ..$earlydefns } with ..$parents { $self => ..$transformedStats }"
       }
       case q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$stats }" => {
-        val transformedStats = valNameTransform.transformTrees(stats)
+        val transformedStats = transformBody(stats)
         wasNamed = true
         q"$mods trait $tpname[..$tparams] extends { ..$earlydefns } with ..$parents { $self => ..$transformedStats }"
       }
