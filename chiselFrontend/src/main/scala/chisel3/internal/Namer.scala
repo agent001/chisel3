@@ -11,8 +11,6 @@ import java.util.IdentityHashMap
 
 /** Recursive Function Namer overview
   *
-  * Summary:
-  *
   * In every function, creates a NamingContext object, which associates all vals with a string name
   * suffix, for example:
   *   val myValName = SomeStatement()
@@ -29,19 +27,13 @@ import java.util.IdentityHashMap
   * associated with the return value (whose name at an enclosing function call will form the prefix
   * for all named objects).
   *
-  * During each context.name(obj, obj_name) call, Namer will check the context's descendants list
-  * for an entry (desc_obj, desc_ctx) where desc_obj is reference-equal to obj. If there is one, it
-  * will append obj_name as a prefix to all of desc_ctx's items, then add those items to its own.
+  * When the naming context prefix is given, it will name all of its items with the prefix and the
+  * associated suffix name. Then, it will check its descendants for sub-contexts with references
+  * matching the item reference, and if there is a match, it will (recursively) give the
+  * sub-context a prefix of its current prefix plus the item reference suffix.
   *
-  * At a top-level (Module-level) Namer call, objects will be named directly, instead of being
-  * added to a list of items (because there is no more prefixing that is dependent on an enclosing
-  * scope).
-  *
-  * For functions, returns are wrapped in a function that:
-  * - pops the current function's entry from the global dynamic context stack; this is
-  *   assert-checked to catch edge cases where the stack might have been mismanaged
-  * - adds the returned object as a descendant of the enclosing context; this allows the enclosing
-  *   function to attach the name of the returned object as a prefix
+  * Note that for Modules, the macro will insert a naming context prefix call with an empty prefix,
+  * starting the recursive naming process.
   */
 
 /** Base class for naming contexts, providing the basic API consisting of naming calls and
