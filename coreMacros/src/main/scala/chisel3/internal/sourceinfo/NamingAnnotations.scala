@@ -57,6 +57,8 @@ object NamingTransforms {
   def chiselName(c: Context)(annottees: c.Tree*): c.Tree = {
     import c.universe._
     import Flag._
+    val globalNamingStack = q"_root_.chisel3.internal.DynamicNamingStack()"
+
     var namedElts: Int = 0
 
     /** Applies the val name transform to a module body. Pretty straightforward, since Module is
@@ -86,9 +88,9 @@ object NamingTransforms {
 
       val transformedBody = valNameTransform.transformTrees(stats)
       q"""
-      val $contextVar = _root_.chisel3.internal.DynamicNamingStack().push_context(new _root_.chisel3.internal.naming.ModuleNamingContext)
+      val $contextVar = $globalNamingStack.push_context(new _root_.chisel3.internal.naming.ModuleNamingContext)
       ..$transformedBody
-      _root_.chisel3.internal.DynamicNamingStack().pop_context($contextVar)
+      $globalNamingStack.pop_context($contextVar)
       """
     }
 
@@ -113,7 +115,7 @@ object NamingTransforms {
           case q"(..$params) => $expr" => tree
           case q"$mods def $tname[..$tparams](...$paramss): $tpt = $expr" => tree
           // TODO: better error messages when returning nothing,
-          case q"return $expr" => q"return _root_.chisel3.internal.DynamicNamingStack().pop_return_context($expr, $contextVar)"
+          case q"return $expr" => q"return $globalNamingStack.pop_return_context($expr, $contextVar)"
           case other => super.transform(other)
         }
       }
@@ -121,8 +123,8 @@ object NamingTransforms {
       val transformedBody = valNameTransform.transform(expr)
       q"""
       {
-        val $contextVar = _root_.chisel3.internal.DynamicNamingStack().push_context(new _root_.chisel3.internal.naming.FunctionNamingContext)
-        _root_.chisel3.internal.DynamicNamingStack().pop_return_context($transformedBody, $contextVar)
+        val $contextVar = $globalNamingStack.push_context(new _root_.chisel3.internal.naming.FunctionNamingContext)
+        $globalNamingStack.pop_return_context($transformedBody, $contextVar)
       }
       """
     }
