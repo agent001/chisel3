@@ -41,12 +41,12 @@ import java.util.IdentityHashMap
   */
 class NamingContext {
   val descendants = new IdentityHashMap[AnyRef, NamingContext]()
-  val items = ListBuffer[(AnyRef, String)]()  // tuple of nameable and suffix, meaningless for non isTop
+  val items = ListBuffer[(AnyRef, String)]()
   var closed = false  // a sanity check to ensure no more name() calls are done after name_prefix
 
   /** Adds a NamingContext object as a descendant - where its contained objects will have names
-    * associated with the name given to the reference object, if the reference object is named
-    * in the scope of this context.
+    * prefixed with the name given to the reference object, if the reference object is named in the
+    * scope of this context.
     */
   def add_descendant(ref: AnyRef, descendant: NamingContext) {
     // First set takes effect, subsequent ones are discarded
@@ -58,7 +58,7 @@ class NamingContext {
 
   /** Suggest a name (that will be propagated to FIRRTL) for an object, then returns the object
     * itself (so this can be inserted transparently anywhere).
-    * Is a no-op (but safe) when applied on objects that aren't named, including non-Chisel data
+    * Is a no-op (so safe) when applied on objects that aren't named, including non-Chisel data
     * types.
     */
   def name[T](obj: T, name: String): T = {

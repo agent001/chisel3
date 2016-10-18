@@ -44,15 +44,13 @@ object NamingTransforms {
     q"..$annottees"
   }
 
-  /** Applies naming transforms to vals in the annotated module. Does not apply recursively to subclasses.
+  /** Applies naming transforms to vals in the annotated content. Does not apply recursively to
+    * subclasses, sub-functions, etc.
     *
     * Basically rewrites all instances of:
     * val name = expr
     * to:
     * val name = context.name(expr, name)
-    * where a naming context is created at the beginning of the scope, and context.name is a
-    * passthrough function (returns the argument object) that names the object (mutably) if it is
-    * a Chisel object, and does nothing otherwise.
     */
   def chiselName(c: Context)(annottees: c.Tree*): c.Tree = {
     import c.universe._
