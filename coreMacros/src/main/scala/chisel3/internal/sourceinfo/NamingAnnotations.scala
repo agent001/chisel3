@@ -27,7 +27,8 @@ object NamingTransforms {
   def dump(c: Context)(annottees: c.Tree*): c.Tree = {
     import c.universe._
 
-    annottees.foreach(tree => c.warning(c.enclosingPosition, s"Debug dump:\n${show(tree)}"))
+    val combined = annottees.map({ tree => show(tree) }).mkString("\r\n\r\n")
+    annottees.foreach(tree => c.warning(c.enclosingPosition, s"Debug dump:\n$combined"))
     q"..$annottees"
   }
 
@@ -40,7 +41,8 @@ object NamingTransforms {
   def treedump(c: Context)(annottees: c.Tree*): c.Tree = {
     import c.universe._
 
-    annottees.foreach(tree => c.warning(c.enclosingPosition, s"Debug tree dump:\n${showRaw(tree)}"))
+    val combined = annottees.map({ tree => showRaw(tree) }).mkString("\r\n")
+    annottees.foreach(tree => c.warning(c.enclosingPosition, s"Debug tree dump:\n$combined"))
     q"..$annottees"
   }
 
