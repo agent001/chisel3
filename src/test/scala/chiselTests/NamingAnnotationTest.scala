@@ -47,16 +47,57 @@ class NamedModule extends BasicTester {
   stop()
 }
 
+/** Ensure no crash happens if a named function is enclosed in a non-named module
+  */
+class NonNamedModule extends BasicTester {
+  @chiselName
+  def NamedFunction(): UInt = {
+    val myVal = UInt(1) + UInt(2)
+    myVal
+  }
+
+  val test = NamedFunction()
+  stop()
+}
+
+/** Ensure no crash happens if a named function is enclosed in a non-named function in a named
+  * module.
+  */
+@chiselName
+class NonNamedFunction extends BasicTester {
+  @chiselName
+  def NamedFunction(): UInt = {
+    val myVal = UInt(1) + UInt(2)
+    myVal
+  }
+
+  def NonNamedFunction() : UInt = {
+    val myVal = NamedFunction()
+    myVal
+  }
+
+  val test = NamedFunction()
+  stop()
+}
+
 /** A simple test that checks the recursive function val naming annotation both compiles and
   * generates the expected names.
   */
 class NamingAnnotationSpec extends ChiselPropSpec {
-  property("NamedModule should elaborate") {
+  property("NamedModule should have proper names") {
     var module: NamedModule = null
     assertTesterPasses { module = new NamedModule; module }
 
     for ((ref, name) <- module.expectedNameMap) {
       assert(ref.instanceName == name)
     }
+  }
+
+  property("NonNamedModule should elaborate") {
+    assertTesterPasses { new NonNamedModule }
+  }
+
+  property("NonNamedFunction should elaborate") {
+    assertTesterPasses { new NonNamedFunction }
   }
 }

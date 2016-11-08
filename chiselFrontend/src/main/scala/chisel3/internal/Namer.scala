@@ -115,7 +115,9 @@ class NamingStack {
   def pop_return_context[T <: AnyRef](prefix_ref: T, until: NamingContext): T = {
     assert(naming_stack.top == until)
     naming_stack.pop()
-    naming_stack.top.add_descendant(prefix_ref, until)
+    if (!naming_stack.isEmpty) {
+      naming_stack.top.add_descendant(prefix_ref, until)
+    }
     prefix_ref
   }
 
