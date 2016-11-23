@@ -194,26 +194,9 @@ package object Chisel {     // scalastyle:ignore package.object.name
     }
   }
 
-<<<<<<< 032ce4f2840339fc2f502bfa2b959599fdf5c49d
   @deprecated("debug doesn't do anything in Chisel3 as no pruning happens in the frontend", "chisel3")
   object debug {  // scalastyle:ignore object.name
     def apply (arg: Data): Data = arg
-=======
-  /** Better naming by macro transforms, defined here instead of in chisel3.internal.naming because
-    * aliasing StaticAnnotations doesn't seem to work.
-    */
-  @compileTimeOnly("enable macro paradise to expand macro annotations")
-  class dump extends StaticAnnotation {
-    def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.dump
-  }
-  @compileTimeOnly("enable macro paradise to expand macro annotations")
-  class treedump extends StaticAnnotation {
-    def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.treedump
-  }
-  @compileTimeOnly("enable macro paradise to expand macro annotations")
-  class chiselName extends StaticAnnotation {
-    def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.chiselName
->>>>>>> Add naming annotations to Chisel compatibility
   }
 
   // Deprecated as of Chsiel3
@@ -298,4 +281,27 @@ package object Chisel {     // scalastyle:ignore package.object.name
   val Pipe = chisel3.util.Pipe
   type Pipe[T <: Data] = chisel3.util.Pipe[T]
 
+
+  /** Package for experimental features, which may have their API changed, be removed, etc.
+    *
+    * Because its contents won't necessarily have the same level of stability and support as
+    * non-experimental, you must explicitly import this package to use its contents.
+    */
+  object experimental {
+    import scala.annotation.StaticAnnotation
+    import scala.annotation.compileTimeOnly
+
+    @compileTimeOnly("enable macro paradise to expand macro annotations")
+    class dump extends StaticAnnotation {
+      def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.dump
+    }
+    @compileTimeOnly("enable macro paradise to expand macro annotations")
+    class treedump extends StaticAnnotation {
+      def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.treedump
+    }
+    @compileTimeOnly("enable macro paradise to expand macro annotations")
+    class chiselName extends StaticAnnotation {
+      def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.chiselName
+    }
+  }
 }

@@ -1,11 +1,6 @@
 // See LICENSE for license details.
 
 package object chisel3 {    // scalastyle:ignore package.object.name
-  import scala.language.experimental.macros
-
-  import scala.annotation.StaticAnnotation
-  import scala.annotation.compileTimeOnly
-
   import internal.firrtl.Width
 
   import util.BitPat
@@ -179,19 +174,6 @@ package object chisel3 {    // scalastyle:ignore package.object.name
   val FullName = chisel3.core.FullName
   val Percent = chisel3.core.Percent
 
-  @compileTimeOnly("enable macro paradise to expand macro annotations")
-  class dump extends StaticAnnotation {
-    def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.dump
-  }
-  @compileTimeOnly("enable macro paradise to expand macro annotations")
-  class treedump extends StaticAnnotation {
-    def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.treedump
-  }
-  @compileTimeOnly("enable macro paradise to expand macro annotations")
-  class chiselName extends StaticAnnotation {
-    def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.chiselName
-  }
-
   /** Implicit for custom Printable string interpolator */
   implicit class PrintableHelper(val sc: StringContext) extends AnyVal {
     /** Custom string interpolator for generating Printables: p"..."
@@ -293,6 +275,23 @@ package object chisel3 {    // scalastyle:ignore package.object.name
         * }}}
         */
       def range(args: Any*): (NumericBound[Int], NumericBound[Int]) = macro chisel3.internal.RangeTransform.apply
+    }
+
+    import scala.language.experimental.macros
+    import scala.annotation.StaticAnnotation
+    import scala.annotation.compileTimeOnly
+
+    @compileTimeOnly("enable macro paradise to expand macro annotations")
+    class dump extends StaticAnnotation {
+      def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.dump
+    }
+    @compileTimeOnly("enable macro paradise to expand macro annotations")
+    class treedump extends StaticAnnotation {
+      def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.treedump
+    }
+    @compileTimeOnly("enable macro paradise to expand macro annotations")
+    class chiselName extends StaticAnnotation {
+      def macroTransform(annottees: Any*): Any = macro chisel3.internal.naming.NamingTransforms.chiselName
     }
   }
 }

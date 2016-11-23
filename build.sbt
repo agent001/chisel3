@@ -19,7 +19,7 @@ lazy val commonSettings = Seq (
   git.remoteRepo := "git@github.com:ucb-bar/chisel3.git",
   autoAPIMappings := true,
   scalaVersion := "2.11.7",
-  scalacOptions := Seq("-deprecation")
+  scalacOptions := Seq("-deprecation"),
   libraryDependencies += "org.scala-lang" % "scala-reflect" % scalaVersion.value,
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.full)
 )

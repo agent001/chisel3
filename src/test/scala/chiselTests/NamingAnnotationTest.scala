@@ -3,6 +3,7 @@
 package chiselTests
 
 import chisel3._
+import chisel3.experimental.chiselName
 import org.scalatest._
 import org.scalatest.prop._
 import chisel3.testers.BasicTester
@@ -15,9 +16,9 @@ class NamedModule extends BasicTester {
 
   @chiselName
   def FunctionMockup2(): UInt = {
-    val my2A = UInt(1)
-    val my2B = my2A +& UInt(2)
-    val my2C = my2B +& UInt(3)
+    val my2A = 1.U
+    val my2B = my2A +& 2.U
+    val my2C = my2B +& 3.U
 
     expectedNameMap += ((my2B, "test_myNested_my2B"))
 
@@ -27,19 +28,19 @@ class NamedModule extends BasicTester {
   @chiselName
   def FunctionMockup(): UInt = {
     val myNested = FunctionMockup2()
-    val myA = UInt(1) + myNested
-    val myB = myA +& UInt(2)
-    val myC = myB +& UInt(3)
+    val myA = 1.U + myNested
+    val myB = myA +& 2.U
+    val myC = myB +& 3.U
 
     expectedNameMap += ((myNested, "test_myNested"))
     expectedNameMap += ((myA, "test_myA"))
     expectedNameMap += ((myB, "test_myB"))
 
-    myC +& UInt(4)
+    myC +& 4.U
   }
 
   val test = FunctionMockup()
-  val test2 = test +& UInt(2)
+  val test2 = test +& 2.U
 
   expectedNameMap += ((test, "test"))
   expectedNameMap += ((test2, "test2"))
@@ -52,7 +53,7 @@ class NamedModule extends BasicTester {
 class NonNamedModule extends BasicTester {
   @chiselName
   def NamedFunction(): UInt = {
-    val myVal = UInt(1) + UInt(2)
+    val myVal = 1.U + 2.U
     myVal
   }
 
@@ -67,7 +68,7 @@ class NonNamedModule extends BasicTester {
 class NonNamedFunction extends BasicTester {
   @chiselName
   def NamedFunction(): UInt = {
-    val myVal = UInt(1) + UInt(2)
+    val myVal = 1.U + 2.U
     myVal
   }
 
